@@ -22,9 +22,13 @@ class CreatorService:
             # Log creator creation activity
             activity_data = {
                 "creator_id": creator_record["id"],
-                "activity_type": ActivityType.CREATOR_CREATED,
-                "body": f"Creator {creator.name} (@{creator.handle}) created in system",
-                "activity_datetime": datetime.now().isoformat()
+                "type": ActivityType.CREATOR_CREATED,
+                "status": "completed",
+                "metadata": {
+                    "body": f"Creator {creator.name} (@{creator.handle}) created in system"
+                },
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
             }
             await self.log_activity(activity_data)
             
@@ -55,6 +59,9 @@ class CreatorService:
 
     async def log_activity(self, activity_data: dict) -> dict:
         try:
+            # Ensure status is always set
+            if "status" not in activity_data:
+                activity_data["status"] = "completed"
             result = self.supabase.table("activities").insert(activity_data).execute()
             return result.data[0]
         except Exception as e:
@@ -75,9 +82,13 @@ class CreatorService:
             # Log status change activity
             activity_data = {
                 "creator_id": creator_id,
-                "activity_type": ActivityType.STATUS_CHANGED,
-                "body": f"Creator status changed to {new_status}",
-                "activity_datetime": datetime.now().isoformat()
+                "type": ActivityType.STATUS_CHANGED,
+                "status": "completed",
+                "metadata": {
+                    "body": f"Creator status changed to {new_status}"
+                },
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
             }
             await self.log_activity(activity_data)
             
