@@ -18,3 +18,4 @@ requests==2.31.0
 python-dotenv==1.0.0
 twilio==8.10.0
 python-multipart==0.0.9  # For form data handling
+mailjet-rest==1.3.4
