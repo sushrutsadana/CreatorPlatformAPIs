@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException, Depends, Body
+from fastapi import APIRouter, HTTPException, Depends, Body, Response
 from ..schemas.creator import CreatorCreate, Activity, ActivityType, CallRequest, EmailRequest
 from ..services.creator_service import CreatorService
 from ..services.call_service import CallService
 from ..services.email_service import EmailService
+from ..services.generate_contract import generate_contract_for_creator, test_groq_connection
 from ..dependencies import get_creator_service
 import logging
+import traceback
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -128,4 +130,51 @@ Content: {email_request.body[:500]}..."""
         
     except Exception as e:
         logger.error(f"Error sending email: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/creators/{creator_id}/generate-contract")
+async def generate_contract(creator_id: str, response: Response):
+    """
+    Generate a contract for a creator based on their email conversations.
+    
+    This endpoint retrieves all email conversations for the creator,
+    then uses Groq's LLM to generate a formal contract based on the conversation content.
+    """
+    try:
+        logger.info(f"Generate contract endpoint called with creator_id: {creator_id}")
+        
+        # Generate contract using the Groq-based service
+        contract_text = await generate_contract_for_creator(creator_id)
+        
+        if not contract_text:
+            logger.error(f"Empty contract text received for creator_id: {creator_id}")
+            raise HTTPException(status_code=500, detail="Failed to generate contract text")
+        
+        logger.info(f"Contract generated successfully for creator_id: {creator_id}")
+        
+        # Return the contract text
+        return {
+            "status": "success",
+            "creator_id": creator_id,
+            "contract": contract_text
+        }
+        
+    except HTTPException as he:
+        logger.error(f"HTTP exception in generate_contract endpoint: {he.detail}")
+        raise he
+    except Exception as e:
+        logger.error(f"Unexpected error in generate_contract endpoint: {str(e)}")
+        logger.error(traceback.format_exc())
+        response.status_code = 500
+        return {"detail": f"Internal server error: {str(e)}"}
+
+@router.get("/creators/test-groq")
+def test_groq():
+    """Test endpoint to verify Groq API connection"""
+    try:
+        result = test_groq_connection()
+        return {"status": "success" if result else "failed", "groq_working": result}
+    except Exception as e:
+        logger.error(f"Groq test failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        return {"status": "error", "error": str(e)} 

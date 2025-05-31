@@ -13,6 +13,7 @@ email-validator==2.1.0.post1
 
 # HTTP and requests
 requests==2.31.0
+httpx==0.26.0  # For async HTTP requests
 
 # Additional packages
 python-dotenv==1.0.0

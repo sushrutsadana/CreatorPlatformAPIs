@@ -1,17 +1,23 @@
 import os
-from supabase import create_client
-from .config import settings
 import logging
+from supabase import create_client, Client
+from dotenv import load_dotenv
 
+# Set up logging
 logger = logging.getLogger(__name__)
 
-try:
-    logger.info(f"Attempting to connect to Supabase at URL: {settings.SUPABASE_URL}")
-    supabase = create_client(
-        os.getenv("SUPABASE_URL"),
-        os.getenv("SUPABASE_KEY")
-    )
-    logger.info("Successfully connected to Supabase")
-except Exception as e:
-    logger.error(f"Failed to connect to Supabase: {str(e)}")
-    raise 
+# Load environment variables
+load_dotenv()
+
+# Initialize Supabase client
+url: str = os.environ.get("SUPABASE_URL")
+key: str = os.environ.get("SUPABASE_KEY")
+
+logger.info(f"Attempting to connect to Supabase at URL: {url}")
+
+supabase_client: Client = create_client(url, key)
+
+logger.info("Successfully connected to Supabase")
+
+# Export the client
+__all__ = ['supabase_client'] 
