@@ -3,7 +3,7 @@ import logging
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
-# Set up logging
+# Configure logging
 logger = logging.getLogger(__name__)
 
 # Load environment variables
@@ -13,11 +13,15 @@ load_dotenv()
 url: str = os.environ.get("SUPABASE_URL")
 key: str = os.environ.get("SUPABASE_KEY")
 
-logger.info(f"Attempting to connect to Supabase at URL: {url}")
+if not url or not key:
+    raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
 
-supabase_client: Client = create_client(url, key)
-
-logger.info("Successfully connected to Supabase")
+try:
+    supabase_client: Client = create_client(url, key)
+    logger.info("Successfully connected to Supabase")
+except Exception as e:
+    logger.error(f"Failed to connect to Supabase: {str(e)}")
+    raise
 
 # Export the client
 __all__ = ['supabase_client'] 

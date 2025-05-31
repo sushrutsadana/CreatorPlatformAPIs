@@ -7,6 +7,7 @@ from ..services.generate_contract import generate_contract_for_creator, test_gro
 from ..dependencies import get_creator_service
 import logging
 import traceback
+from datetime import datetime
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -33,7 +34,15 @@ async def create_activity(
     try:
         activity_data = activity.dict()
         activity_data["creator_id"] = creator_id
-        activity_data["activity_datetime"] = activity_data["activity_datetime"].isoformat()
+        
+        # Move body to metadata
+        if "body" in activity_data:
+            activity_data["metadata"] = {"body": activity_data.pop("body")}
+        else:
+            activity_data["metadata"] = {}
+        activity_data["created_at"] = activity_data.get("created_at", datetime.now().isoformat())
+        activity_data["updated_at"] = activity_data.get("updated_at", datetime.now().isoformat())
+        activity_data["status"] = activity_data.get("status", "completed")
         
         activity_record = await creator_service.log_activity(activity_data)
         return {"status": "success", "data": activity_record}
@@ -72,12 +81,13 @@ async def make_call_to_creator(
         # Log activity
         activity_data = {
             "creator_id": creator_id,
-            "activity_type": ActivityType.CALL_MADE,
-            "body": f"""Automated call initiated to {creator['name']} (@{creator['handle']}):
-• Language: {call_request.language}
-• Voice: {call_request.voice}
-• Duration: {call_request.max_duration} minutes
-• Prompt: {call_request.prompt[:100]}..."""
+            "type": ActivityType.CALL_MADE,
+            "status": "completed",
+            "metadata": {
+                "body": f"""Automated call initiated to {creator['name']} (@{creator['handle']}):\n• Language: {call_request.language}\n• Voice: {call_request.voice}\n• Duration: {call_request.max_duration} minutes\n• Prompt: {call_request.prompt[:100]}..."""
+            },
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat()
         }
         await creator_service.log_activity(activity_data)
 
@@ -104,25 +114,25 @@ async def send_email_to_creator(
         if not creator.get('email'):
             raise HTTPException(status_code=400, detail="Creator has no email address")
         
-        # Send the email using the optional from_email
+        # Send the email (removed from_email argument)
         result = await email_service.send_email(
             to_email=creator['email'],
             subject=email_request.subject,
             body=email_request.body,
             cc=email_request.cc,
-            bcc=email_request.bcc,
-            from_email=email_request.from_email
+            bcc=email_request.bcc
         )
         
         # Log the email activity
         activity_data = {
             "creator_id": creator_id,
-            "activity_type": ActivityType.EMAIL_SENT,
-            "body": f"""Email sent to {creator['name']} (@{creator['handle']}):
-Subject: {email_request.subject}
-To: {creator['email']}
-From: {result.get('from')}
-Content: {email_request.body[:500]}..."""
+            "type": ActivityType.EMAIL_SENT,
+            "status": "completed",
+            "metadata": {
+                "body": f"""Email sent to {creator['name']} (@{creator['handle']}):\nSubject: {email_request.subject}\nTo: {creator['email']}\nFrom: {result.get('from')}\nContent: {email_request.body[:500]}..."""
+            },
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat()
         }
         await creator_service.log_activity(activity_data)
         
